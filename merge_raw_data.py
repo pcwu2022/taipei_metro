@@ -18,7 +18,7 @@ def load_json_files():
 
     return raw_data
 
-def save_raw_data(raw_data, filename=f"data/raw_{DAYS}.json"):
+def save_raw_data(raw_data, filename=f"working/{DAYS}.json"):
     with open(filename, 'w') as f:
         f.write(json.dumps(raw_data, indent=4))
 

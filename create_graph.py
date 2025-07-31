@@ -2,7 +2,7 @@ import networkx as nx
 import json
 import matplotlib.pyplot as plt
 
-TEST_DATA = True
+TEST_DATA = False
 DAYS = "12345"
 # DAYS = "67"
 
@@ -40,16 +40,16 @@ def display_graph(G):
     
     plt.title("Taipei Metro Graph")
     plt.tight_layout()
-    plt.savefig("metro_graph.png", dpi=300)
+    plt.savefig("output/metro_graph.png", dpi=300)
 
-with open(f"data/raw_{DAYS}.json", 'r') as f:
+with open(f"working/{DAYS}.json", 'r') as f:
     raw_data = json.load(f)
 
 if TEST_DATA:
     for line in raw_data:
-        raw_data[line]["trainSchedules"] = raw_data[line]["trainSchedules"][50:55]
+        raw_data[line]["trainSchedules"] = raw_data[line]["trainSchedules"][50:60]
 
-with open("data/raw_transfer_time.json", 'r') as f:
+with open("working/transfer_time.json", 'r') as f:
     transfer_time = json.load(f)
     
 for line in raw_data:
@@ -91,8 +91,8 @@ for line in raw_data:
             if prev_train[index] != None:
                 G.add_edge(prev_train[index], current_node)
                 G[prev_train[index]][current_node]["type"] = TRANSFER
-                G[prev_train[index]][current_node]["time"] = G.nodes[prev_train[index]]["time"] - G.nodes[current_node]["time"]
-            
+                G[prev_train[index]][current_node]["time"] = G.nodes[current_node]["time"] - G.nodes[prev_train[index]]["time"]
+
             train_head = current_node
             prev_train[index] = current_node
     
@@ -117,8 +117,46 @@ for line in raw_data:
                             if departure - time >= arrival:
                                 G.add_edge(f"{line}_{station}_{arrival}", f"{dest_line}_{dest_station}_{departure}")
                                 G[f"{line}_{station}_{arrival}"][f"{dest_line}_{dest_station}_{departure}"]["type"] = TRANSFER
+                                G[f"{line}_{station}_{arrival}"][f"{dest_line}_{dest_station}_{departure}"]["time"] = departure - arrival
                                 break        
 
     recorded_stations.extend([f"{line}_{station}" for station in raw_data[line]["stations"]])
 
-display_graph(G)
+if TEST_DATA:
+    display_graph(G)
+
+# Export the graph to JSON file
+
+def graph_to_json(G):
+    graph_data = {
+        "nodes": [],
+        "edges": []
+    }
+    
+    # Add nodes with attributes
+    for node in G.nodes():
+        node_data = {
+            "id": node,
+            "label": G.nodes[node].get('label', ''),
+            "time": G.nodes[node].get('time', 0)
+        }
+        graph_data["nodes"].append(node_data)
+    
+    # Add edges with attributes
+    for u, v, data in G.edges(data=True):
+        edge_data = {
+            "source": u,
+            "target": v,
+            "type": data.get('type', 0),
+            "time": data.get('time', 0)
+        }
+        graph_data["edges"].append(edge_data)
+    
+    return graph_data
+
+# Export the graph to a JSON file
+graph_data = graph_to_json(G)
+with open("working/metro_graph.json", "w") as f:
+    json.dump(graph_data, f, indent=2)
+
+print(f"Graph saved to working/metro_graph.json with {len(G.nodes())} nodes and {len(G.edges())} edges")
