@@ -2,6 +2,7 @@ import networkx as nx
 import json
 import matplotlib.pyplot as plt
 
+SUPPRESS = False
 TEST_DATA = False
 DAYS = "12345"
 # DAYS = "67"
@@ -38,19 +39,39 @@ def display_graph(G):
     labels = {node: G.nodes[node]['label'] for node in G.nodes()}
     # nx.draw_networkx_labels(G, pos, labels, font_size=6, font_color='black')
     
-    plt.title("Taipei Metro Graph")
+    plt.title("Taipei Metro DiGraph")
     plt.tight_layout()
     plt.savefig("output/metro_graph.png", dpi=300)
 
 with open(f"working/{DAYS}.json", 'r') as f:
     raw_data = json.load(f)
 
-if TEST_DATA:
-    for line in raw_data:
-        raw_data[line]["trainSchedules"] = raw_data[line]["trainSchedules"][50:60]
 
 with open("working/transfer_time.json", 'r') as f:
     transfer_time = json.load(f)
+
+if SUPPRESS:
+    suppressed_data = {}
+    for line in raw_data:
+        if line not in transfer_time: continue
+        suppressed_data[line] = {
+            "stations": [],
+            "trainSchedules": []
+        }
+        for _ in range(len(raw_data[line]["trainSchedules"])):
+            suppressed_data[line]["trainSchedules"].append([])
+        for index, station in enumerate(raw_data[line]["stations"]):
+            if (station in transfer_time[line] and len(transfer_time[line][station]) > 1) or station == "O12" or station == "O21" or index == 0 or index == len(raw_data[line]["stations"]) - 1:
+                suppressed_data[line]["stations"].append(station)
+                for i in range(len(suppressed_data[line]["trainSchedules"])):
+                    suppressed_data[line]["trainSchedules"][i].append(raw_data[line]["trainSchedules"][i][index])
+    raw_data = suppressed_data
+    with open("working/suppressed_data.json", "w") as f:
+        f.write(json.dumps(suppressed_data, indent=4))
+
+if TEST_DATA:
+    for line in raw_data:
+        raw_data[line]["trainSchedules"] = raw_data[line]["trainSchedules"][50:80]
     
 for line in raw_data:
     reciprocal = line.replace("_a", "_b") if "_a" in line else line.replace("_b", "_a")
@@ -65,7 +86,7 @@ for line in raw_data:
         if dest_line_station not in transfer_time[line][station]:
             transfer_time[line][station][dest_line_station] = 0
 
-G = nx.Graph()
+G = nx.DiGraph()
 
 recorded_stations = []
 for line in raw_data:
@@ -111,19 +132,30 @@ for line in raw_data:
                         arrival = train[index]
                         if arrival == None: continue
 
+                        reverse_dest_train = None
+                        reverse_departure = None
+
                         for dest_train in raw_data[dest_line]["trainSchedules"]:
                             departure = dest_train[dest_index]
                             if departure == None: continue
+                            if arrival - time >= departure:
+                                reverse_dest_train = dest_train
+                                reverse_departure = departure
                             if departure - time >= arrival:
                                 G.add_edge(f"{line}_{station}_{arrival}", f"{dest_line}_{dest_station}_{departure}")
                                 G[f"{line}_{station}_{arrival}"][f"{dest_line}_{dest_station}_{departure}"]["type"] = TRANSFER
                                 G[f"{line}_{station}_{arrival}"][f"{dest_line}_{dest_station}_{departure}"]["time"] = departure - arrival
-                                break        
+                                break
+                        if reverse_dest_train != None and reverse_departure != None:
+                            G.add_edge(f"{dest_line}_{dest_station}_{reverse_departure}", f"{line}_{station}_{arrival}")
+                            G[f"{dest_line}_{dest_station}_{reverse_departure}"][f"{line}_{station}_{arrival}"]["type"] = TRANSFER
+                            G[f"{dest_line}_{dest_station}_{reverse_departure}"][f"{line}_{station}_{arrival}"]["time"] = arrival - reverse_departure
+                                
 
     recorded_stations.extend([f"{line}_{station}" for station in raw_data[line]["stations"]])
 
-if TEST_DATA:
-    display_graph(G)
+# if TEST_DATA:
+#     display_graph(G)
 
 # Export the graph to JSON file
 
@@ -156,7 +188,7 @@ def graph_to_json(G):
 
 # Export the graph to a JSON file
 graph_data = graph_to_json(G)
-with open("working/metro_graph.json", "w") as f:
+with open(f"working/metro_graph{'_test' if TEST_DATA else ''}{'_suppressed' if SUPPRESS else ''}.json", "w") as f:
     json.dump(graph_data, f, indent=2)
 
-print(f"Graph saved to working/metro_graph.json with {len(G.nodes())} nodes and {len(G.edges())} edges")
+print(f"Graph saved with {len(G.nodes())} nodes and {len(G.edges())} edges")
