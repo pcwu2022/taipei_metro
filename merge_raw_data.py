@@ -1,4 +1,3 @@
-import networkx as nx
 import os
 import json
 
