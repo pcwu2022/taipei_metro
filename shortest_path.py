@@ -7,6 +7,10 @@ import re
 SUPPRESS = False
 TEST_DATA = False
 DAYS = "12345"
+SOURCE = True
+
+TRAIN = 0
+TRANSFER = 1
 
 def json_to_graph(graph_data):
     """
@@ -70,15 +74,38 @@ for line in raw_data:
 
 STATION_NUM = current_index
 
+def generate_source(G: nx.DiGraph):
+    global STATION_NUM
+    global stations_index
+    source = "source"
+    source_node = "S_a_source_000"
+    G.add_node(source_node)
+    stations_index[source] = STATION_NUM
+    STATION_NUM = STATION_NUM + 1
+
+    # find all nodes without in-edges with type TRAIN
+    for node in G.nodes():
+        type_train = False
+        for pred in G.predecessors(node):
+            if G[pred][node]["type"] == TRAIN: 
+                type_train = True
+                break
+        if not type_train:
+            G.add_edge(source_node, node)
+            G[source_node][node]["type"] = TRANSFER
+            G[source_node][node]["time"] = 0
+    return source_node
+
 G = json_to_graph(graph_data)
 
-STATION_MULTIPLIER = 10
-PATH_MULTIPLIER = 0.5
+STATION_MULTIPLIER = 15
+PATH_MULTIPLIER = 1
     
 def a_star(G: nx.DiGraph, source):
     q = []
     
     history = [False] * STATION_NUM
+    history[stations_index[source.split("_")[2]]] = True
     traversed = 0
     path = [source]
     total_time = 0
@@ -92,8 +119,8 @@ def a_star(G: nx.DiGraph, source):
     while len(q) > 0:
         tup = heapq.heappop(q)
         node, total_time, history, path, traversed = tup[1]
-        if tup[0] < current_best:
-            current_best = tup[0]
+        if sum(history) > current_best:
+            current_best = sum(history)
             best_path = path
             with open("working/best_path.json", "w") as f:
                 f.write(json.dumps(path, indent=4))
@@ -101,6 +128,9 @@ def a_star(G: nx.DiGraph, source):
         print('->'.join([n.split('_')[2] for n in path]) + ": " + str(tup[0]))
         if sum(history) == STATION_NUM: 
             print(history)
+            best_path = path
+            with open("working/best_path.json", "w") as f:
+                f.write(json.dumps(path, indent=4))
             break
         for successor in G.successors(node):
             if successor in visited_nodes: continue
@@ -132,7 +162,5 @@ def a_star(G: nx.DiGraph, source):
             heapq.heappush(q, (score, [successor, new_time, new_history, new_path, new_traversed]))
             score_cache.add((successor, score))
     print(best_path)
-    with open("working/best_path.json", "w") as f:
-        f.write(json.dumps(best_path, indent=4))
 
-a_star(G, "O_b_O21_480")
+a_star(G, generate_source(G) if SOURCE else "R_b_R28_480")
