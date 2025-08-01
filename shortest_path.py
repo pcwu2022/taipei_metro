@@ -98,8 +98,8 @@ def generate_source(G: nx.DiGraph):
 
 G = json_to_graph(graph_data)
 
-STATION_MULTIPLIER = 15
-PATH_MULTIPLIER = 1
+STATION_MULTIPLIER = 8
+PATH_MULTIPLIER = 0.2
     
 def a_star(G: nx.DiGraph, source):
     q = []
@@ -127,7 +127,7 @@ def a_star(G: nx.DiGraph, source):
         visited_nodes.add(node)
         print('->'.join([n.split('_')[2] for n in path]) + ": " + str(tup[0]))
         if sum(history) == STATION_NUM: 
-            print(history)
+            print("===== FINISHED =====")
             best_path = path
             with open("working/best_path.json", "w") as f:
                 f.write(json.dumps(path, indent=4))
@@ -158,6 +158,7 @@ def a_star(G: nx.DiGraph, source):
 
             new_traversed = traversed + delta_stations
             score = new_time - new_traversed * STATION_MULTIPLIER + len(new_path) * PATH_MULTIPLIER
+            # score = 0 - (new_traversed) / (new_time + 1)
             if (successor, score) in score_cache: continue
             heapq.heappush(q, (score, [successor, new_time, new_history, new_path, new_traversed]))
             score_cache.add((successor, score))
