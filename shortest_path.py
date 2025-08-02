@@ -3,11 +3,16 @@ import json
 import heapq
 import copy
 import re
+import random
 
 SUPPRESS = False
 TEST_DATA = False
 DAYS = "12345"
 SOURCE = True
+
+STATION_MULTIPLIER = 2
+PATH_MULTIPLIER = 1
+TIME_MULTIPLIER = 0.1
 
 TRAIN = 0
 TRANSFER = 1
@@ -75,6 +80,8 @@ for line in raw_data:
 STATION_NUM = current_index
 
 def generate_source(G: nx.DiGraph):
+    START_TIME_MULTIPLIER = 0.000001
+
     global STATION_NUM
     global stations_index
     source = "source"
@@ -92,14 +99,18 @@ def generate_source(G: nx.DiGraph):
                 break
         if not type_train:
             G.add_edge(source_node, node)
+            raw_time = int(node.split("_")[3])
             G[source_node][node]["type"] = TRANSFER
-            G[source_node][node]["time"] = 0
+            G[source_node][node]["time"] = (raw_time - 6*60) * START_TIME_MULTIPLIER
     return source_node
 
 G = json_to_graph(graph_data)
 
-STATION_MULTIPLIER = 8
-PATH_MULTIPLIER = 0.2
+
+
+# STATION_MULTIPLIER = 3
+# PATH_MULTIPLIER = 0.1
+# TIME_MULTIPLIER = 1
     
 def a_star(G: nx.DiGraph, source):
     q = []
@@ -109,7 +120,6 @@ def a_star(G: nx.DiGraph, source):
     traversed = 0
     path = [source]
     total_time = 0
-    visited_nodes = set()
 
     heapq.heappush(q, (0, [source, total_time, copy.deepcopy(history), copy.deepcopy(path), copy.deepcopy(traversed)]))
 
@@ -119,13 +129,15 @@ def a_star(G: nx.DiGraph, source):
     while len(q) > 0:
         tup = heapq.heappop(q)
         node, total_time, history, path, traversed = tup[1]
+        if random.random() < 0.001:
+            with open("working/best_path.json", "w") as f:
+                f.write(json.dumps(path, indent=4))
         if sum(history) > current_best:
             current_best = sum(history)
             best_path = path
-            with open("working/best_path.json", "w") as f:
-                f.write(json.dumps(path, indent=4))
-        visited_nodes.add(node)
-        print('->'.join([n.split('_')[2] for n in path]) + ": " + str(tup[0]))
+            # with open("working/best_path.json", "w") as f:
+            #     f.write(json.dumps(path, indent=4))
+        # print(f"[{str(sum(history))}] " + '->'.join([n.split('_')[2] for n in path]) + ": " + str(tup[0]))
         if sum(history) == STATION_NUM: 
             print("===== FINISHED =====")
             best_path = path
@@ -133,7 +145,7 @@ def a_star(G: nx.DiGraph, source):
                 f.write(json.dumps(path, indent=4))
             break
         for successor in G.successors(node):
-            if successor in visited_nodes: continue
+            if successor in path: continue
             new_time = total_time + G[node][successor]["time"]
             new_station_index = stations_index[successor.split("_")[2]]
             new_history = copy.deepcopy(history)
@@ -157,7 +169,7 @@ def a_star(G: nx.DiGraph, source):
                     delta_stations = 1
 
             new_traversed = traversed + delta_stations
-            score = new_time - new_traversed * STATION_MULTIPLIER + len(new_path) * PATH_MULTIPLIER
+            score = new_time * TIME_MULTIPLIER + (STATION_NUM - new_traversed) * STATION_MULTIPLIER + len(new_path) * PATH_MULTIPLIER
             # score = 0 - (new_traversed) / (new_time + 1)
             if (successor, score) in score_cache: continue
             heapq.heappush(q, (score, [successor, new_time, new_history, new_path, new_traversed]))

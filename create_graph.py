@@ -3,6 +3,7 @@ import json
 import matplotlib.pyplot as plt
 
 SUPPRESS = False
+SIMPLIFY = True
 TEST_DATA = False
 DAYS = "12345"
 # DAYS = "67"
@@ -79,12 +80,13 @@ for line in raw_data:
     
     if line not in transfer_time:
         transfer_time[line] = {}
-    for station in stations:
+    for index, station in enumerate(stations):
         if station not in transfer_time[line]:
             transfer_time[line][station] = {}
-        dest_line_station = f"{reciprocal}_{station}"
-        if dest_line_station not in transfer_time[line][station]:
-            transfer_time[line][station][dest_line_station] = 0
+        if not SIMPLIFY or (len(transfer_time[line][station]) > 1 or station == "O12" or station == "O21" or index == 0 or index == len(raw_data[line]["stations"]) - 1):
+            dest_line_station = f"{reciprocal}_{station}"
+            if dest_line_station not in transfer_time[line][station]:
+                transfer_time[line][station][dest_line_station] = 0
 
 G = nx.DiGraph()
 
@@ -109,7 +111,7 @@ for line in raw_data:
                 G.add_edge(train_head, current_node)
                 G[train_head][current_node]["type"] = TRAIN
                 G[train_head][current_node]["time"] = G.nodes[current_node]["time"] - G.nodes[train_head]["time"]
-            if prev_train[index] != None:
+            if prev_train[index] != None and not SIMPLIFY:
                 G.add_edge(prev_train[index], current_node)
                 G[prev_train[index]][current_node]["type"] = TRANSFER
                 G[prev_train[index]][current_node]["time"] = G.nodes[current_node]["time"] - G.nodes[prev_train[index]]["time"]
