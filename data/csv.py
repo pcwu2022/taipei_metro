@@ -1,6 +1,6 @@
 import json
 
-files = ["RX_a_67.csv", "RX_a_12345.csv", "RX_b_67.csv", "RX_b_12345.csv", "GX_a_67.csv", "GX_a_12345.csv", "GX_b_67.csv", "GX_b_12345.csv"]
+files = ["RBR_a_12345.csv", "RBR_b_12345.csv", "RBR_a_67.csv", "RBR_b_67.csv"]
 
 for file in files:
     with open(file, 'r') as f:

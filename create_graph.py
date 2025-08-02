@@ -190,7 +190,7 @@ def graph_to_json(G):
 
 # Export the graph to a JSON file
 graph_data = graph_to_json(G)
-with open(f"working/metro_graph{'_test' if TEST_DATA else ''}{'_suppressed' if SUPPRESS else ''}.json", "w") as f:
+with open(f"working/metro_graph{'_test' if TEST_DATA else ''}{'_suppressed' if SUPPRESS else ''}{'_simplified' if SIMPLIFY else ''}.json", "w") as f:
     json.dump(graph_data, f, indent=2)
 
 print(f"Graph saved with {len(G.nodes())} nodes and {len(G.edges())} edges")

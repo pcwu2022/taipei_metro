@@ -9,10 +9,15 @@ SUPPRESS = False
 TEST_DATA = False
 DAYS = "12345"
 SOURCE = True
+SIMPLIFY = True
+EVERY_STOP = False
+OUTPUT_BEST_PATH = True
 
-STATION_MULTIPLIER = 2
-PATH_MULTIPLIER = 1
-TIME_MULTIPLIER = 0.1
+STOP_TIME = 2
+
+STATION_MULTIPLIER = 1
+PATH_MULTIPLIER = 0.5
+TIME_MULTIPLIER = 0.25
 
 TRAIN = 0
 TRANSFER = 1
@@ -48,7 +53,7 @@ def json_to_graph(graph_data):
     
     return G
 
-with open(f"working/metro_graph{'_test' if TEST_DATA else ''}{'_suppressed' if SUPPRESS else ''}.json", "r") as f:
+with open(f"working/metro_graph{'_test' if TEST_DATA else ''}{'_suppressed' if SUPPRESS else ''}{'_simplified' if SIMPLIFY else ''}.json", "r") as f:
     graph_data = json.load(f)
 
 with open(f"working/{DAYS}.json", 'r') as f:
@@ -105,12 +110,6 @@ def generate_source(G: nx.DiGraph):
     return source_node
 
 G = json_to_graph(graph_data)
-
-
-
-# STATION_MULTIPLIER = 3
-# PATH_MULTIPLIER = 0.1
-# TIME_MULTIPLIER = 1
     
 def a_star(G: nx.DiGraph, source):
     q = []
@@ -129,14 +128,16 @@ def a_star(G: nx.DiGraph, source):
     while len(q) > 0:
         tup = heapq.heappop(q)
         node, total_time, history, path, traversed = tup[1]
-        if random.random() < 0.001:
-            with open("working/best_path.json", "w") as f:
-                f.write(json.dumps(path, indent=4))
+        if not OUTPUT_BEST_PATH:
+            if random.random() < 0.001:
+                with open("working/best_path.json", "w") as f:
+                    f.write(json.dumps(path, indent=4))
         if sum(history) > current_best:
             current_best = sum(history)
             best_path = path
-            # with open("working/best_path.json", "w") as f:
-            #     f.write(json.dumps(path, indent=4))
+            if OUTPUT_BEST_PATH:
+                with open("working/best_path.json", "w") as f:
+                    f.write(json.dumps(path, indent=4))
         # print(f"[{str(sum(history))}] " + '->'.join([n.split('_')[2] for n in path]) + ": " + str(tup[0]))
         if sum(history) == STATION_NUM: 
             print("===== FINISHED =====")
@@ -149,7 +150,13 @@ def a_star(G: nx.DiGraph, source):
             new_time = total_time + G[node][successor]["time"]
             new_station_index = stations_index[successor.split("_")[2]]
             new_history = copy.deepcopy(history)
-            new_history[new_station_index] = True
+            if EVERY_STOP:
+                if history[new_station_index] == False:
+                    station_index = stations_index[node.split("_")[2]]
+                    if station_index == new_station_index and G[node][successor]["time"] > STOP_TIME:
+                        new_history[new_station_index] = True
+            else:
+                new_history[new_station_index] = True
             new_path = copy.deepcopy(path)
             new_path.append(successor)
 
@@ -170,7 +177,8 @@ def a_star(G: nx.DiGraph, source):
 
             new_traversed = traversed + delta_stations
             score = new_time * TIME_MULTIPLIER + (STATION_NUM - new_traversed) * STATION_MULTIPLIER + len(new_path) * PATH_MULTIPLIER
-            # score = 0 - (new_traversed) / (new_time + 1)
+            # score = new_time * TIME_MULTIPLIER * (STATION_NUM - new_traversed) * STATION_MULTIPLIER + len(new_path) * PATH_MULTIPLIER
+            
             if (successor, score) in score_cache: continue
             heapq.heappush(q, (score, [successor, new_time, new_history, new_path, new_traversed]))
             score_cache.add((successor, score))
