@@ -26,7 +26,7 @@ with open(f"{DAYS}.json", 'r') as f:
     raw_data = json.load(f)
 
 
-with open("working/transfer_time.json", 'r') as f:
+with open("transfer_time.json", 'r') as f:
     transfer_time = json.load(f)
 
 if SUPPRESS:
@@ -195,10 +195,12 @@ def a_star(G: nx.DiGraph, source):
     current_best = 0
     best_path = []
     score_cache = set()
+    i = 0
     while len(q) > 0:
+        i += 1
         tup = heapq.heappop(q)
         node, total_time, history, path, traversed = tup[1]
-        if random.random() < 0.001 and OUTPUT_PROGRESS:
+        if i % 10000 == 0 and OUTPUT_PROGRESS:
             print(f"[{str(sum(history))}] " + '->'.join([n.split('_')[2] for n in path]) + ": " + str(tup[0]))
         if sum(history) > current_best:
             current_best = sum(history)
