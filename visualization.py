@@ -19,8 +19,8 @@ LINE_COLORS = {
     "G": "#008659",   # Green Line
     "O": "#f8b61c",   # Orange Line
     "BR": "#7e3f00",  # Brown Line
-    "Y": "#ffd800",   # Yellow Line (Circle Line)
-    "A": "#c48c31"    # Airport Line
+    "RX": "#ff8af1",   # Yellow Line (Circle Line)
+    "GX": "#99ff8c"    # Airport Line
 }
 
 def load_station_locations():

@@ -1,6 +1,6 @@
 import json
 
-files = ["BR_a_67.csv", "BR_a_12345.csv", "BR_b_67.csv", "BR_b_12345.csv"]
+files = ["RX_a_67.csv", "RX_a_12345.csv", "RX_b_67.csv", "RX_b_12345.csv", "GX_a_67.csv", "GX_a_12345.csv", "GX_b_67.csv", "GX_b_12345.csv"]
 
 for file in files:
     with open(file, 'r') as f:
@@ -10,7 +10,7 @@ for file in files:
         data = data.replace(',\n', '\n')
 
     lines = data.splitlines()
-    num_cols = len(lines[0].split(',')) - 1
+    num_cols = len(lines[0].split(',')) - 2
     json_data = {
         "stations": [],
         "trainSchedules": []
